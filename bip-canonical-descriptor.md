@@ -240,7 +240,8 @@ The recommendations in this section govern which descriptor an exporter produces
 canonicalized. They are not part of canonicalization, which never applies them. The only key
 derivation they call for is the normalization of hardened derivation described in
 [BIP 380](bip-0380.mediawiki), extended under Preconditions to a final step that is a single
-hardened index.
+hardened index, and, where an exporter deliberately includes less private key material than it
+holds, the derivation of the private key it includes.
 
 An exporter SHOULD write each extended public key as the key at the last hardened derivation step
 in its path from the master key, as described in the "Normalization of Key Expressions with
@@ -260,6 +261,15 @@ private key cannot recover its parent or that parent's other children. A wallet 
 private key, for example, is exported as `xprv.../84h/0h/0h/0/*` and not as
 `[fingerprint/84h/0h/0h]xprv.../0/*`. The normalization described in [BIP 380](bip-0380.mediawiki)
 concerns only descriptors exported without private keys.
+
+The exception is an exporter that deliberately includes less private key material than it holds,
+such as a watch-only export that must carry one private key but not the key it was derived from.
+Such an exporter derives the extended private key it intends to include, and SHOULD write it as the
+key at the last hardened derivation step in its path from the master key, in the same manner as an
+extended public key, with any unhardened steps written after it. A watch-only
+[BIP 392](bip-0392.mediawiki) `sp()` descriptor, for example, carries the scan private key but
+neither the spend private key nor the master key from which both are derived, and is exported as
+`sp([fingerprint/352h/0h/0h/1h]xprv.../0,[fingerprint/352h/0h/0h/0h]xpub.../0)`.
 
 Where a wallet's receiving and change output scripts are described by two descriptors differing
 only in one derivation step at the same position in each key expression, they SHOULD be exported as
@@ -366,7 +376,8 @@ an extended public key covers the cases where an exporter holding the private ke
 further: where [BIP 380](bip-0380.mediawiki) calls for it, and where the final step is a single
 hardened index. This document applies it to each branch of a multipath descriptor. The
 recommendation on export depth covers unhardened steps, so conforming exporters agree on the depth
-of extended public keys except where the final step is a hardened wildcard. Other differences
+of extended public keys, and of extended private keys derived to withhold their parents, except
+where the final step is a hardened wildcard. Other differences
 remain even between conforming exporters, because they change what the descriptor conveys rather
 than how it is written: the presence or absence of key origin information, the presence of private
 key material and the depth at which it is held, and a public key written directly rather than as an
@@ -381,11 +392,15 @@ that cosigners exchange, and that users recognize, while a key derived further i
 has seen. Deriving in the other direction, towards the master key, is impossible without private
 keys. The last hardened step is the depth that leaves the familiar key in place, and it is the
 depth [BIP 380](bip-0380.mediawiki) already prescribes when hardened steps must be removed. This
-document adds only that the exporter stops there. The rule concerns extended public keys only:
-deriving an extended private key discards, from the descriptor alone, the ability to derive its
-parent's other children, so an extended private key is written as held. Two descriptors that hold
-private keys at different depths convey different private key material, and are among the
-differences that remain distinct, described above.
+document adds only that the exporter stops there. An extended private key is ordinarily written as
+held instead: deriving it discards, from the descriptor alone, the ability to derive its parent's
+other children. Two descriptors that hold private keys at different depths convey different private
+key material, and are among the differences that remain distinct, described above. Where an
+exporter derives a private key in order to withhold its parent, as in a watch-only export, that
+reason no longer applies, and the last hardened step is chosen, as for a public key, so that
+exporters agree. It is also the point at which the withheld material is protected: a hardened child
+does not reveal its parent even together with the parent's extended public key, which is why
+[BIP 352](bip-0352.mediawiki) requires hardened derivation for the keys it defines.
 
 **Why are the children of a script tree branch ordered?** For the same reason as the key expressions
 above: the order carries no information. [BIP 341](bip-0341.mediawiki) sorts each pair of child
